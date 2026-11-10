@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  // Sidebar toggle (mobile)
+  // 1. Sidebar toggle (mobile)
   var menuBtn = document.getElementById('menuBtn');
   var sidebar = document.getElementById('sidebar');
 
@@ -25,16 +25,65 @@
     });
   }
 
-  // Confirm delete
+  // 2. SweetAlert2 Global Confirm (Replaces window.confirm)
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-confirm]');
-    if (el && !window.confirm(el.getAttribute('data-confirm'))) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    if (!el) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    var message = el.getAttribute('data-confirm') || 'هل أنت متأكد؟';
+
+    Swal.fire({
+      title: 'هل أنت متأكد؟',
+      text: message,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'نعم، تأكيد',
+      cancelButtonText: 'إلغاء',
+      reverseButtons: true,
+      customClass: {
+        popup: 'swal2-rtl'
+      }
+    }).then(function (result) {
+      if (result.isConfirmed) {
+        if (el.tagName.toLowerCase() === 'a') {
+          window.location.href = el.href;
+        } else {
+          var form = el.closest('form');
+          if (form) {
+            // Remove attribute to prevent infinite loop
+            el.removeAttribute('data-confirm');
+            form.submit();
+          }
+        }
+      }
+    });
   });
 
-  // Count-up animation
+  // 3. Flash Messages to SweetAlert Toast
+  <?php
+    // We inject the flash message directly into JS if it exists
+    $flashData = getFlash();
+    if ($flashData):
+  ?>
+    Swal.fire({
+      toast: true,
+      position: 'top-start',
+      icon: '<?= $flashData['type'] === 'ok' ? 'success' : 'error' ?>',
+      title: '<?= e(addslashes($flashData['msg'])) ?>',
+      showConfirmButton: false,
+      timer: 4000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    });
+  <?php endif; ?>
+
+  // 4. Count-up animation
   function animateCount(el) {
     var target = parseInt(el.getAttribute('data-count'), 10) || 0;
     var duration = 1400;
@@ -63,6 +112,7 @@
   } else {
     document.querySelectorAll('[data-count]').forEach(animateCount);
   }
+
 })();
 </script>
 </body>

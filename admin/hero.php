@@ -8,7 +8,6 @@ $errors = [];
 
 $row = $pdo->query('SELECT * FROM hero LIMIT 1')->fetch();
 if (!$row) {
-    /* Auto-create if missing */
     $pdo->exec("INSERT INTO hero (badge, title, highlight, subtitle) VALUES ('', '', '', '')");
     $row = $pdo->query('SELECT * FROM hero LIMIT 1')->fetch();
 }
@@ -34,6 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (mb_strlen($data['subtitle']) > 500)  $errors[] = 'النص الفرعي طويل جداً.';
     if (mb_strlen($data['badge']) > 150)     $errors[] = 'الشارة طويلة جداً.';
 
+    if ($data['highlight'] !== '' && $data['title'] !== ''
+        && mb_strpos($data['title'], $data['highlight']) === false) {
+        $errors[] = 'الكلمة المميزة يجب أن تكون موجودة داخل العنوان.';
+    }
+
     if (empty($errors)) {
         $pdo->prepare('UPDATE hero SET badge=?, title=?, highlight=?, subtitle=? WHERE id=?')
             ->execute([$data['badge'], $data['title'], $data['highlight'], $data['subtitle'], $row['id']]);
@@ -48,7 +52,6 @@ $pageTitle = 'قسم البطل';
 include 'includes/header.php';
 ?>
 
-<!-- ========== INTRO BANNER ========== -->
 <section class="edit-hero-banner">
   <div class="ehb-info">
     <span class="ehb-chip">قسم البطل</span>
@@ -103,7 +106,7 @@ include 'includes/header.php';
         </div>
       </div>
 
-      <!-- Section 2: Title -->
+      <!-- Section 2: Title + Highlight -->
       <div class="sec-card">
         <div class="sec-card-head">
           <span class="sec-ico">
@@ -117,31 +120,29 @@ include 'includes/header.php';
           <small>Headline</small>
         </div>
         <div class="sec-card-body">
-          <div class="grid-2">
-            <div class="fld">
-              <div class="fld-head">
-                <label for="highlight">الكلمة المميزة (ذهبية)</label>
-                <span class="char-count" data-for="highlight" data-max="60">0 / 60</span>
-              </div>
-              <input id="highlight" name="highlight" type="text" maxlength="60"
-                     value="<?= e($data['highlight']) ?>"
-                     placeholder="عالم الديكور">
-              <div class="fld-hint">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-                </svg>
-                تظهر بلون ذهبي لامع في العنوان.
-              </div>
+          <div class="fld">
+            <div class="fld-head">
+              <label for="title">العنوان الكامل <span style="color:var(--red)">*</span></label>
+              <span class="char-count" data-for="title" data-max="200">0 / 200</span>
             </div>
+            <input id="title" name="title" type="text" required maxlength="200"
+                   value="<?= e($data['title']) ?>"
+                   placeholder="عالم الديكور.. نصنع لبيتك ومكانك مظهراً يليق بك">
+          </div>
 
-            <div class="fld">
-              <div class="fld-head">
-                <label for="title">بقية العنوان <span style="color:var(--red)">*</span></label>
-                <span class="char-count" data-for="title" data-max="200">0 / 200</span>
-              </div>
-              <input id="title" name="title" type="text" required maxlength="200"
-                     value="<?= e($data['title']) ?>"
-                     placeholder="نصنع لبيتك ومكانك مظهراً يليق بك">
+          <div class="fld" style="margin-bottom:0">
+            <div class="fld-head">
+              <label for="highlight">الكلمة المميزة (ذهبية داخل العنوان)</label>
+              <span class="char-count" data-for="highlight" data-max="60">0 / 60</span>
+            </div>
+            <input id="highlight" name="highlight" type="text" maxlength="60"
+                   value="<?= e($data['highlight']) ?>"
+                   placeholder="الديكور">
+            <div class="fld-hint">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              اكتبي كلمة موجودة حرفياً داخل العنوان — ستظهر بالذهبي المتوهج.
             </div>
           </div>
         </div>
@@ -199,7 +200,7 @@ include 'includes/header.php';
           </div>
 
           <h3 class="hp-title" id="pvTitle">
-            <span class="hp-highlight" id="pvHighlight"><?= e($data['highlight'] ?: 'الكلمة المميزة') ?></span><span id="pvRest"></span>
+            <span id="pvBefore"></span><span class="hp-highlight" id="pvHighlight"></span><span id="pvAfter"></span>
           </h3>
 
           <p class="hp-sub <?= $data['subtitle'] === '' ? 'empty' : '' ?>" id="pvSub">
@@ -267,10 +268,35 @@ include 'includes/header.php';
 
   var pvBadgeWrap = document.getElementById('pvBadgeWrap');
   var pvBadge     = document.getElementById('pvBadge');
+  var pvBefore    = document.getElementById('pvBefore');
   var pvHighlight = document.getElementById('pvHighlight');
-  var pvRest      = document.getElementById('pvRest');
+  var pvAfter     = document.getElementById('pvAfter');
   var pvSub       = document.getElementById('pvSub');
-  var pvTitle     = document.getElementById('pvTitle');
+
+  function renderTitle(title, highlight) {
+    title     = (title     || '').trim();
+    highlight = (highlight || '').trim();
+
+    if (!title && !highlight) {
+      return { before: '', hl: 'عنوان القسم الرئيسي', after: '' };
+    }
+    if (!highlight) {
+      return { before: title, hl: '', after: '' };
+    }
+    if (!title) {
+      return { before: '', hl: highlight, after: '' };
+    }
+
+    var idx = title.indexOf(highlight);
+    if (idx === -1) {
+      return { before: title + ' ', hl: highlight, after: '' };
+    }
+    return {
+      before: title.substring(0, idx),
+      hl:     highlight,
+      after:  title.substring(idx + highlight.length)
+    };
+  }
 
   function update() {
     /* Badge */
@@ -279,18 +305,10 @@ include 'includes/header.php';
     pvBadgeWrap.hidden = b === '';
 
     /* Title */
-    var hl = inHighlight.value.trim();
-    var rest = inTitle.value.trim();
-    pvHighlight.textContent = hl || 'الكلمة المميزة';
-
-    if (hl && rest) {
-      pvRest.textContent = '.. ' + rest;
-    } else if (rest) {
-      pvRest.textContent = rest;
-    } else {
-      pvRest.textContent = '';
-    }
-    if (!hl && !rest) pvHighlight.textContent = 'عنوان القسم الرئيسي';
+    var parts = renderTitle(inTitle.value, inHighlight.value);
+    pvBefore.textContent    = parts.before;
+    pvHighlight.textContent = parts.hl;
+    pvAfter.textContent     = parts.after;
 
     /* Sub */
     var s = inSub.value.trim();

@@ -40,6 +40,42 @@ function navIcon($name, $size = 20) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+  .swal2-popup {
+    font-family: 'Cairo', sans-serif !important;
+    border-radius: 16px !important;
+  }
+  .swal2-title {
+    color: var(--ink) !important;
+    font-weight: 900 !important;
+  }
+  .swal2-html-container {
+    color: var(--text-2) !important;
+    font-weight: 600 !important;
+  }
+  .swal2-styled.swal2-confirm {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+    color: var(--ink) !important;
+    box-shadow: 0 8px 20px rgba(199,154,75,.3) !important;
+    font-weight: 800 !important;
+    border-radius: 10px !important;
+  }
+  .swal2-styled.swal2-cancel {
+    background: var(--surface-2) !important;
+    color: var(--text-2) !important;
+    font-weight: 800 !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+  }
+  .swal2-styled.swal2-confirm:hover {
+    transform: translateY(-2px);
+  }
+</style>
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body class="admin-body">

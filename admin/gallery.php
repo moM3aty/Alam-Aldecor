@@ -321,8 +321,41 @@ include 'includes/header.php';
         document.querySelectorAll('.gal-cb:checked'),
         function (cb) { return cb.value; }
       );
-      if (!ids.length) return;
-      if (!window.confirm('حذف ' + ids.length + ' صورة نهائياً؟')) return;
+            if (!ids.length) return;
+
+      Swal.fire({
+        title: 'حذف الصور',
+        text: 'هل تريد حذف ' + ids.length + ' صورة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          var fd = new FormData();
+          fd.append('_csrf', CSRF);
+          fd.append('action', 'bulk_delete');
+          ids.forEach(function (id, i) { fd.append('ids[' + i + ']', id); });
+
+          fetch('gallery.php', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (res && res.ok) {
+              window.location.reload();
+            } else {
+              Swal.fire('خطأ', 'تعذّر الحذف، حاول مجدداً.', 'error');
+            }
+          })
+          .catch(function () {
+            Swal.fire('خطأ', 'خطأ في الاتصال.', 'error');
+          });
+        }
+      });
 
       var fd = new FormData();
       fd.append('_csrf', CSRF);
@@ -347,9 +380,44 @@ include 'includes/header.php';
   grid.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-del]');
     if (!btn) return;
-    e.stopPropagation();
-    if (!window.confirm('حذف هذه الصورة نهائياً؟')) return;
+        e.stopPropagation();
     var id = btn.getAttribute('data-del');
+    
+    Swal.fire({
+      title: 'حذف الصورة',
+      text: 'هل تريد حذف هذه الصورة نهائياً؟',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'نعم، احذف',
+      cancelButtonText: 'إلغاء',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        var fd = new FormData();
+        fd.append('_csrf', CSRF);
+        fd.append('action', 'delete');
+        fd.append('id', id);
+
+        fetch('gallery.php', {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res && res.ok) {
+            var tile = btn.closest('.gal-tile');
+            if (tile) {
+              tile.style.transition = 'opacity .3s, transform .3s';
+              tile.style.opacity = '0';
+              tile.style.transform = 'scale(.85)';
+              setTimeout(function () { window.location.reload(); }, 350);
+            }
+          }
+        })
+        .catch(function () {});
+      }
+    });
     var fd = new FormData();
     fd.append('_csrf', CSRF);
     fd.append('action', 'delete');
